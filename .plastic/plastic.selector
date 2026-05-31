@@ -1,0 +1,4 @@
+repository "CAR GAME S6 2026-05-13_08-23-29/CAR GAME S6@18968376690001@cloud"
+  path "/"
+    br "/main"
+    co "/main"
