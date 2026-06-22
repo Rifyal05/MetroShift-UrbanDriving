@@ -35,7 +35,6 @@ public class GameManager : MonoBehaviour
     public GameObject layarMinimap;
     public float tinggiMinimap = 150f; 
 
-    [Header("Tombol Setup Sebelum Mulai (Mobile)")]
     public GameObject tombolUtilitasUI;
     public GameObject panelKontrolMobile;
 
@@ -45,6 +44,10 @@ public class GameManager : MonoBehaviour
     private float sisaWaktu = 0f;
     private int barangTerkumpul = 0;
     private TextMeshProUGUI labelTombolUtilitas;
+
+    private Vector3 posisiAwalGarisStart;
+    private Quaternion rotasiAwalGarisStart;
+    private bool awalGarisStartTercatat = false;
 
     private void Awake()
     {
@@ -56,6 +59,13 @@ public class GameManager : MonoBehaviour
     {
         if (daftarMobil == null || daftarMobil.Length == 0) return;
 
+        if (daftarMobil[0] != null)
+        {
+            posisiAwalGarisStart = daftarMobil[0].transform.position;
+            rotasiAwalGarisStart = daftarMobil[0].transform.rotation;
+            awalGarisStartTercatat = true;
+        }
+
         misiAktifSaatIni = PlayerPrefs.GetInt("LevelAktif", 0);
         if (misiAktifSaatIni >= daftarMisi.Length && daftarMisi.Length > 0)
         {
@@ -63,16 +73,25 @@ public class GameManager : MonoBehaviour
             PlayerPrefs.SetInt("LevelAktif", 0);
         }
 
+        indeksMobilAktif = PlayerPrefs.GetInt("MobilAktif", 0);
+        if (indeksMobilAktif >= daftarMobil.Length)
+        {
+            indeksMobilAktif = 0;
+            PlayerPrefs.SetInt("MobilAktif", 0);
+        }
+
+        InisialisasiPosPosition();
+
         if (daftarMisi.Length > 0) MuatMisi(misiAktifSaatIni);
 
         for (int i = 0; i < daftarMobil.Length; i++)
         {
-            if (daftarMobil[i] != null) daftarMobil[i].SetActive(false);
+            if (daftarMobil[i] != null)
+            {
+                daftarMobil[i].SetActive(i == indeksMobilAktif);
+            }
         }
-        if (daftarMobil[indeksMobilAktif] != null)
-        {
-            daftarMobil[indeksMobilAktif].SetActive(true);
-        }
+        
         PasangKameraKeMobilAktif();
 
         if (tombolUtilitasUI != null)
@@ -87,7 +106,6 @@ public class GameManager : MonoBehaviour
         if (teksBarang != null) teksBarang.gameObject.SetActive(false);
 
         if (tombolUtilitasUI != null) tombolUtilitasUI.SetActive(true);
-
         if (panelKontrolMobile != null) panelKontrolMobile.SetActive(false);
     }
 
@@ -113,6 +131,11 @@ public class GameManager : MonoBehaviour
         }
         else
         {
+            if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+            {
+                ResetMobilAktif();
+            }
+
             if (daftarMisi.Length > 0 && daftarMisi[misiAktifSaatIni].gunakanWaktu)
             {
                 sisaWaktu -= Time.deltaTime;
@@ -128,6 +151,65 @@ public class GameManager : MonoBehaviour
     private void LateUpdate()
     {
         UpdatePosisiMinimap();
+    }
+
+    private void InisialisasiPosPosition()
+    {
+        Vector3 posisiStart = Vector3.zero;
+        Quaternion rotasiStart = Quaternion.identity;
+        bool titikValid = false;
+
+        if (daftarMisi != null && misiAktifSaatIni < daftarMisi.Length)
+        {
+            DataMisi misi = daftarMisi[misiAktifSaatIni];
+            if (misi != null && misi.titikStartMisi != null)
+            {
+                posisiStart = misi.titikStartMisi.position;
+                rotasiStart = misi.titikStartMisi.rotation;
+                titikValid = true;
+            }
+        }
+
+        if (!titikValid && awalGarisStartTercatat)
+        {
+            posisiStart = posisiAwalGarisStart;
+            rotasiStart = rotasiAwalGarisStart;
+            titikValid = true;
+        }
+
+        if (!titikValid) return;
+
+        for (int i = 0; i < daftarMobil.Length; i++)
+        {
+            if (daftarMobil[i] != null)
+            {
+                GameObject mobil = daftarMobil[i];
+                Rigidbody rb = mobil.GetComponent<Rigidbody>();
+
+                if (rb != null)
+                {
+                    rb.isKinematic = true; 
+                    mobil.transform.position = posisiStart;
+                    mobil.transform.rotation = rotasiStart;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.isKinematic = false; 
+                }
+                else
+                {
+                    mobil.transform.position = posisiStart;
+                    mobil.transform.rotation = rotasiStart;
+                }
+
+                CarControllerPro controller = mobil.GetComponentInChildren<CarControllerPro>(true);
+                if (controller != null)
+                {
+                    SINKRONISASI_SPAWN_CONTROLLER(controller, posisiStart, rotasiStart);
+                }
+            }
+        }
+
+        Physics.SyncTransforms();
     }
 
     public void MulaiTancapGas()
@@ -171,17 +253,32 @@ public class GameManager : MonoBehaviour
             {
                 if (daftarMobil[i] != null)
                 {
-                    daftarMobil[i].transform.position = misi.titikStartMisi.position;
-                    daftarMobil[i].transform.rotation = misi.titikStartMisi.rotation;
-                    
-                    Rigidbody rb = daftarMobil[i].GetComponent<Rigidbody>();
+                    GameObject mobil = daftarMobil[i];
+                    Rigidbody rb = mobil.GetComponent<Rigidbody>();
+
                     if (rb != null)
                     {
+                        rb.isKinematic = true;
+                        mobil.transform.position = misi.titikStartMisi.position;
+                        mobil.transform.rotation = misi.titikStartMisi.rotation;
                         rb.linearVelocity = Vector3.zero;
                         rb.angularVelocity = Vector3.zero;
+                        rb.isKinematic = false;
+                    }
+                    else
+                    {
+                        mobil.transform.position = misi.titikStartMisi.position;
+                        mobil.transform.rotation = misi.titikStartMisi.rotation;
+                    }
+
+                    CarControllerPro controller = mobil.GetComponentInChildren<CarControllerPro>(true);
+                    if (controller != null)
+                    {
+                        SINKRONISASI_SPAWN_CONTROLLER(controller, misi.titikStartMisi.position, misi.titikStartMisi.rotation);
                     }
                 }
             }
+            Physics.SyncTransforms();
         }
 
         if (misi.targetPanahAwal != null)
@@ -342,17 +439,43 @@ public class GameManager : MonoBehaviour
         GameObject mobilLama = daftarMobil[indeksMobilAktif];
         Vector3 posisiLama = mobilLama.transform.position;
         Quaternion rotasiLama = mobilLama.transform.rotation;
-        Vector3 kecepatanLama = mobilLama.GetComponent<Rigidbody>().linearVelocity;
+        
+        Rigidbody rbLama = mobilLama.GetComponent<Rigidbody>();
+        Vector3 kecepatanLama = rbLama != null ? rbLama.linearVelocity : Vector3.zero;
 
         int indeksBaru = (indeksMobilAktif + 1) % daftarMobil.Length;
         GameObject mobilBaru = daftarMobil[indeksBaru];
 
-        mobilBaru.transform.position = posisiLama;
-        mobilBaru.transform.rotation = rotasiLama;
-        mobilBaru.GetComponent<Rigidbody>().linearVelocity = kecepatanLama;
+        Rigidbody rbBaru = mobilBaru.GetComponent<Rigidbody>();
+        if (rbBaru != null)
+        {
+            rbBaru.isKinematic = true;
+            mobilBaru.transform.position = posisiLama;
+            mobilBaru.transform.rotation = rotasiLama;
+            rbBaru.linearVelocity = kecepatanLama;
+            rbBaru.angularVelocity = Vector3.zero;
+            rbBaru.isKinematic = false;
+        }
+        else
+        {
+            mobilBaru.transform.position = posisiLama;
+            mobilBaru.transform.rotation = rotasiLama;
+        }
+
+        Physics.SyncTransforms();
 
         indeksMobilAktif = indeksBaru;
+        
+        PlayerPrefs.SetInt("MobilAktif", indeksMobilAktif);
+        PlayerPrefs.Save();
+
         PasangKameraKeMobilAktif();
+
+        CarControllerPro controllerBaru = mobilBaru.GetComponentInChildren<CarControllerPro>(true);
+        if (controllerBaru != null)
+        {
+            SINKRONISASI_SPAWN_CONTROLLER(controllerBaru, posisiLama, rotasiLama);
+        }
 
         if (daftarMisi.Length > 0)
         {
@@ -454,14 +577,44 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void SINKRONISASI_SPAWN_CONTROLLER(Component controller, Vector3 targetPos, Quaternion targetRot)
+    {
+        if (controller == null) return;
+        System.Type tipe = controller.GetType();
+
+        System.Reflection.FieldInfo[] fields = tipe.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        foreach (var field in fields)
+        {
+            string namaKecil = field.Name.ToLower();
+            if (namaKecil.Contains("spawn") || namaKecil.Contains("start") || namaKecil.Contains("initial") || namaKecil.Contains("reset") || namaKecil.Contains("origin"))
+            {
+                try
+                {
+                    if (field.FieldType == typeof(Vector3))
+                    {
+                        field.SetValue(controller, targetPos);
+                    }
+                    else if (field.FieldType == typeof(Transform))
+                    {
+                        Transform t = (Transform)field.GetValue(controller);
+                        if (t != null)
+                        {
+                            t.position = targetPos;
+                            t.rotation = targetRot;
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning("[Safe-Research] Gagal menyelaraskan field: " + ex.Message);
+                }
+            }
+        }
+    }
+
     private bool IsPointerOverUI()
     {
         if (UnityEngine.EventSystems.EventSystem.current == null) return false;
-        if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject()) return true;
-        for (int i = 0; i < Input.touchCount; i++)
-        {
-            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(i).fingerId)) return true;
-        }
-        return false;
+        return UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
     }
 }

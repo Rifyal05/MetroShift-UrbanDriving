@@ -14,9 +14,13 @@ crashlytics-build.properties
 .vs/
 .idea/
 .gradle/
+.vscode/
+.plastic/
+.utmp/
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
