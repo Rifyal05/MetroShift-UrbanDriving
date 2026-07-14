@@ -51,6 +51,11 @@ public class PauseManager : MonoBehaviour
         isPaused = false;
         Time.timeScale = 1f;
 
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+        }
+
         if (canvasPauseOverlay != null) canvasPauseOverlay.SetActive(false);
         
         if (panelCarController != null)
@@ -74,6 +79,11 @@ public class PauseManager : MonoBehaviour
 
     public void CloseSettings()
     {
+        if (UnityEngine.EventSystems.EventSystem.current != null)
+        {
+            UnityEngine.EventSystems.EventSystem.current.SetSelectedGameObject(null);
+        }
+
         if (panelSettings != null) panelSettings.SetActive(false);
         if (panelPause != null) panelPause.SetActive(true);
     }

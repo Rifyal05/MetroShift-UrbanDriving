@@ -26,7 +26,6 @@ public class CarControllerPro : MonoBehaviour
 
     [Header("4. Tuning Setir Pintar")]
     public float sudutBelokMaksimal = 35f; 
-    [Tooltip("Batas MAKSIMAL derajat setir saat mobil NGEBUT (Angka kecil = sangat stabil di jalan lurus)")]
     public float sudutBelokSaatNgebut = 5f; 
     public float kecepatanPutarSetir = 3f; 
     public float kecepatanLurusOtomatis = 12f; 
@@ -36,18 +35,25 @@ public class CarControllerPro : MonoBehaviour
     public float remInersiaDrift = 1.5f; 
     public float cengkramanMukaDrift = 2f;
 
-    [Header("6. Efek Visual")]
+    [Header("6. Efek Visual & Audio")]
     public TrailRenderer jejakBanKanan;
     public TrailRenderer jejakBanKiri;
+    public AudioSource audioMesin;
+    public AudioSource audioBan;
+    public AudioClip suaraIdle;
+    public AudioClip suaraNgebut;
+    public AudioClip suaraDrift;
+    public AudioClip suaraRem;
+    public AudioClip suaraTabrakan;
 
     [Header("7. Sistem Drift Assist Arcade")]
     public bool gunakanDriftAssist = true;
-    [Tooltip("Tenaga dorong ekstra ke arah depan mobil saat melakukan drift untuk menjaga momentum kecepatan")]
     public float tenagaDorongDriftAssist = 3500f;
-    [Tooltip("Target kecepatan putar sudut (Y-Axis) saat drift. Angka besar membuat mobil meluncur sangat menyamping")]
     public float kecepatanRotasiDriftAssist = 2.5f;
-    [Tooltip("Seberapa responsif asisten dalam menahan mobil agar tidak spin-out / terputar balik")]
     public float stabilitasDriftAssist = 1.5f;
+
+    [Header("8. Pengaturan Fisika")]
+    public Transform pusatMassaObjek;
 
     private float normalStiffness = 1f;
     private float inputGas;
@@ -63,6 +69,7 @@ public class CarControllerPro : MonoBehaviour
     private bool btnRemPressed = false;
 
     private Rigidbody rb;
+    public static float volumeSFX = 1f;
     
     private Vector3 lastNodePosition;
     private Quaternion lastSafeRotation;
@@ -84,13 +91,24 @@ public class CarControllerPro : MonoBehaviour
     private void OnEnable()
     {
         ActiveInstance = this;
+        volumeSFX = PlayerPrefs.GetFloat("Set_SFX", 1f);
+        
+        if (audioMesin != null) audioMesin.UnPause();
+        if (audioBan != null) audioBan.UnPause();
+    }
+
+    private void OnDisable()
+    {
+        if (audioMesin != null) audioMesin.Pause();
+        if (audioBan != null) audioBan.Pause();
     }
 
     private void Start()
     {
         if (rb != null)
         {
-            rb.centerOfMass = new Vector3(0, -0.15f, 0);
+            if (pusatMassaObjek != null) rb.centerOfMass = pusatMassaObjek.localPosition;
+            else rb.centerOfMass = new Vector3(0, -0.15f, 0); 
         }
         normalStiffness = wcBelakangKanan.sidewaysFriction.stiffness;
 
@@ -100,6 +118,18 @@ public class CarControllerPro : MonoBehaviour
         lastNodePosition = startPosition;
         lastSafeRotation = startRotation;
 
+        kecepatanPutarSetir = PlayerPrefs.GetFloat("Set_Sensitivitas", 3f);
+        gunakanDriftAssist = PlayerPrefs.GetInt("Set_DriftAssist", 1) == 1;
+        volumeSFX = PlayerPrefs.GetFloat("Set_SFX", 1f);
+
+        if (audioMesin != null)
+        {
+            audioMesin.clip = suaraIdle;
+            audioMesin.loop = true;
+            audioMesin.volume = volumeSFX * 0.8f;
+            audioMesin.Play();
+        }
+
         #if UNITY_STANDALONE || UNITY_EDITOR
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -108,8 +138,11 @@ public class CarControllerPro : MonoBehaviour
 
     private void Update()
     {
+        if (ActiveInstance != this) ActiveInstance = this;
+
         AmbilInputSistemBaru();
         CekMekanismeResetStuck();
+        UpdateSuaraMobil();
     }
 
     private void FixedUpdate()
@@ -119,6 +152,19 @@ public class CarControllerPro : MonoBehaviour
         FisikaDriftArcade(); 
         UpdateAnimasiPutaranRoda();
         DeteksiTitikResetJalan(); 
+    }
+
+    public void AturPosisiAwal(Vector3 posisiBaru, Quaternion rotasiBaru)
+    {
+        startPosition = posisiBaru;
+        startRotation = rotasiBaru;
+        lastNodePosition = posisiBaru;
+        lastSafeRotation = rotasiBaru;
+    }
+
+    public void SetVolumeSFX(float vol)
+    {
+        volumeSFX = vol;
     }
 
     private void AmbilInputSistemBaru()
@@ -161,35 +207,21 @@ public class CarControllerPro : MonoBehaviour
             sedangBelok = true;
         }
 
-        if (!sedangBelok)
-        {
-            sumbuSetirVirtual = Mathf.MoveTowards(sumbuSetirVirtual, 0f, Time.deltaTime * kecepatanLurusOtomatis);
-        }
-
+        if (!sedangBelok) sumbuSetirVirtual = Mathf.MoveTowards(sumbuSetirVirtual, 0f, Time.deltaTime * kecepatanLurusOtomatis);
         sumbuSetirVirtual = Mathf.Clamp(sumbuSetirVirtual, -1f, 1f);
 
         float rasioKecepatan = 0f;
-        if (rb != null)
-        {
-            rasioKecepatan = Mathf.Clamp01(rb.linearVelocity.magnitude / (maxSpeedKmH / 3.6f));
-        }
+        if (rb != null) rasioKecepatan = Mathf.Clamp01(rb.linearVelocity.magnitude / (maxSpeedKmH / 3.6f));
         float batasSudutSaatIni = Mathf.Lerp(sudutBelokMaksimal, sudutBelokSaatNgebut, rasioKecepatan);
 
         setirAkhirDiterapkan = sumbuSetirVirtual * batasSudutSaatIni;
 
         if (Keyboard.current != null)
         {
-            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed)
-            {
-                inputGasRaw = 1f;
-            }
-            else if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed)
-            {
-                inputGasRaw = -1f;
-            }
+            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) inputGasRaw = 1f;
+            else if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) inputGasRaw = -1f;
 
             if (Keyboard.current.spaceKey.isPressed) isHandbrake = true;
-
             if (Keyboard.current.rKey.wasPressedThisFrame)
             {
                 if (Time.time - lastRPressTime <= doubleTapWaktu) ResetKeAwal(); 
@@ -200,20 +232,14 @@ public class CarControllerPro : MonoBehaviour
 
         if (btnMajuPressed) inputGasRaw = 1f;
         else if (btnMundurPressed) inputGasRaw = -1f;
-
         if (btnRemPressed) isHandbrake = true; 
 
-        if (inputGasRaw > 0.05f)
-        {
-            inputGas = inputGasRaw * tenagaMesin;
-        }
+        if (inputGasRaw > 0.05f) inputGas = inputGasRaw * tenagaMesin;
         else if (inputGasRaw < -0.05f)
         {
             float arahMaju = 0f;
-            if (rb != null)
-            {
-                arahMaju = Vector3.Dot(transform.forward, rb.linearVelocity);
-            }
+            if (rb != null) arahMaju = Vector3.Dot(transform.forward, rb.linearVelocity);
+            
             if (arahMaju > 1f) isBraking = true; 
             else inputGas = inputGasRaw * tenagaMesin; 
         }
@@ -227,9 +253,7 @@ public class CarControllerPro : MonoBehaviour
         float tenagaGasBeneran = inputGas;
 
         if (isHandbrake || isBraking) tenagaGasBeneran = 0f;
-
-        if (kecepatanSaatIni > maxSpeedKmH && tenagaGasBeneran > 0)
-            tenagaGasBeneran = 0f; 
+        if (kecepatanSaatIni > maxSpeedKmH && tenagaGasBeneran > 0) tenagaGasBeneran = 0f; 
 
         wcDepanKanan.motorTorque = tenagaGasBeneran;
         wcDepanKiri.motorTorque = tenagaGasBeneran;
@@ -410,8 +434,91 @@ public class CarControllerPro : MonoBehaviour
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
-
         stuckTimer = 0f;
+    }
+
+    private void UpdateSuaraMobil()
+    {
+        if (audioMesin == null || rb == null) return;
+
+        if (Time.timeScale == 0f)
+        {
+            if (audioMesin.isPlaying) audioMesin.Pause();
+            if (audioBan.isPlaying) audioBan.Pause();
+            return;
+        }
+        else
+        {
+            if (!audioMesin.isPlaying)
+            {
+                audioMesin.UnPause();
+            }
+        }
+
+        audioMesin.volume = volumeSFX * 0.8f;
+        float laju = rb.linearVelocity.magnitude * 3.6f;
+        
+        AudioClip targetKlipMesin = suaraIdle;
+        float targetPitch = 1f;
+
+        if (Mathf.Abs(inputGas) > 0.1f)
+        {
+            targetKlipMesin = suaraNgebut;
+            targetPitch = 1f + (laju / maxSpeedKmH) * 1.5f;
+        }
+        else if (laju > 15f)
+        {
+            targetKlipMesin = suaraRem; 
+            targetPitch = 0.8f + (laju / maxSpeedKmH) * 0.7f;
+        }
+        else
+        {
+            targetKlipMesin = suaraIdle;
+            targetPitch = 1f + (laju / 20f) * 0.2f;
+        }
+
+        if (audioMesin.clip != targetKlipMesin)
+        {
+            audioMesin.clip = targetKlipMesin;
+            audioMesin.Play();
+        }
+
+        audioMesin.pitch = Mathf.Lerp(audioMesin.pitch, targetPitch, Time.deltaTime * 3f);
+
+        if (audioBan != null)
+        {
+            bool lagiDrift = (isHandbrake || (isBraking && laju > 30f)) && laju > 10f;
+            
+            if (lagiDrift)
+            {
+                audioBan.volume = volumeSFX * 0.8f;
+                if (!audioBan.isPlaying)
+                {
+                    audioBan.clip = suaraDrift;
+                    audioBan.pitch = Random.Range(0.9f, 1.1f);
+                    audioBan.Play();
+                }
+            }
+            else
+            {
+                if (audioBan.isPlaying)
+                {
+                    audioBan.volume = Mathf.Lerp(audioBan.volume, 0f, Time.deltaTime * 5f);
+                    if (audioBan.volume < 0.05f) audioBan.Stop();
+                }
+            }
+        }
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (suaraTabrakan != null && collision.relativeVelocity.magnitude > 10f)
+        {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.MainkanSFX(suaraTabrakan, 0.8f);
+            }
+        }
     }
 
     public void SetInputMaju(bool isPressed) => btnMajuPressed = isPressed;

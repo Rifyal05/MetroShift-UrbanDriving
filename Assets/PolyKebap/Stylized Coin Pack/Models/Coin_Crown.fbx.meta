@@ -1,7 +1,14 @@
 fileFormatVersion: 2
 guid: 1f9239d832cd0714a88ba940268d52fc
+AssetOrigin:
+  serializedVersion: 1
+  productId: 340494
+  packageName: "Stylized Coin Pack \u2013 Gold, Silver, Bronze & Wood"
+  packageVersion: 1.0
+  assetPath: Assets/PolyKebap/Stylized Coin Pack/Models/Coin_Crown.fbx
+  uploadId: 823710
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects: {}
   materials:
@@ -34,7 +41,7 @@ ModelImporter:
   meshes:
     lODScreenPercentages: []
     globalScale: 1
-    meshCompression: 0
+    meshCompression: 1
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1
@@ -56,6 +63,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -105,10 +115,3 @@ ModelImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 340494
-  packageName: "Stylized Coin Pack \u2013 Gold, Silver, Bronze & Wood"
-  packageVersion: 1.0
-  assetPath: Assets/PolyKebap/Stylized Coin Pack/Models/Coin_Crown.fbx
-  uploadId: 823710
