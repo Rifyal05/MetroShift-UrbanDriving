@@ -1,5 +1,0 @@
-C:/Users/rifial/CAR GAME S6/.utmp/RelWithDebInfo/5o592n2m/arm64-v8a/CMakeFiles/edit_cache.dir
-C:/Users/rifial/CAR GAME S6/.utmp/RelWithDebInfo/5o592n2m/arm64-v8a/CMakeFiles/rebuild_cache.dir
-C:/Users/rifial/CAR GAME S6/.utmp/RelWithDebInfo/5o592n2m/arm64-v8a/GameActivity/CMakeFiles/game.dir
-C:/Users/rifial/CAR GAME S6/.utmp/RelWithDebInfo/5o592n2m/arm64-v8a/GameActivity/CMakeFiles/edit_cache.dir
-C:/Users/rifial/CAR GAME S6/.utmp/RelWithDebInfo/5o592n2m/arm64-v8a/GameActivity/CMakeFiles/rebuild_cache.dir

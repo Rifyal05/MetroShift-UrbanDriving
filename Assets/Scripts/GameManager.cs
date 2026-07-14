@@ -106,6 +106,18 @@ public class GameManager : MonoBehaviour
 
         if (daftarMobil == null || daftarMobil.Length == 0) return;
 
+        indeksMobilAktif = PlayerPrefs.GetInt("MobilAktif", 0);
+        if (indeksMobilAktif < 0 || indeksMobilAktif >= daftarMobil.Length)
+        {
+            indeksMobilAktif = 0;
+        }
+
+        int levelTerbuka = PlayerPrefs.GetInt("ProgressLevel", 0) + 1;
+        if (indeksMobilAktif < levelMinimalBukaMobil.Length && levelMinimalBukaMobil[indeksMobilAktif] > levelTerbuka)
+        {
+            indeksMobilAktif = 0;
+        }
+
         if (daftarMobil[0] != null)
         {
             posisiAwalGarisStart = daftarMobil[0].transform.position;
@@ -423,6 +435,12 @@ public class GameManager : MonoBehaviour
 
         int levelSelanjutnya = misiAktifSaatIni + 1;
 
+        int progressSebelumnya = PlayerPrefs.GetInt("ProgressLevel", 0);
+        if (levelSelanjutnya > progressSebelumnya)
+        {
+            PlayerPrefs.SetInt("ProgressLevel", levelSelanjutnya);
+        }
+
         if (levelSelanjutnya >= daftarMisi.Length)
         {
             PlayerPrefs.SetInt("LevelAktif", levelSelanjutnya);
@@ -571,7 +589,7 @@ public class GameManager : MonoBehaviour
     {
         if (daftarMobil.Length <= 1) return; 
 
-        int levelTerbuka = PlayerPrefs.GetInt("LevelAktif", 0);
+        int levelTerbuka = PlayerPrefs.GetInt("ProgressLevel", 0) + 1;
         int indeksBaru = (indeksMobilAktif + 1) % daftarMobil.Length;
 
         while (indeksBaru < levelMinimalBukaMobil.Length && levelMinimalBukaMobil[indeksBaru] > levelTerbuka)

@@ -19,7 +19,7 @@ public class MainMenuManager : MonoBehaviour
     public GameObject panelPilihLevel;
     public GameObject panelLoading;
     public GameObject panelGarasi;
-    public GameObject panelTutorialMenu; // Referensi untuk Panel Tutorial di Menu
+    public GameObject panelTutorialMenu;
 
     [Header("Referensi Slider & Teks Loading")]
     public Slider sliderLoading;
@@ -58,7 +58,7 @@ public class MainMenuManager : MonoBehaviour
         if (panelPilihLevel != null) panelPilihLevel.SetActive(false);
         if (panelLoading != null) panelLoading.SetActive(false);
         if (panelGarasi != null) panelGarasi.SetActive(false);
-        if (panelTutorialMenu != null) panelTutorialMenu.SetActive(false); // Sembunyikan tutorial saat start
+        if (panelTutorialMenu != null) panelTutorialMenu.SetActive(false);
 
         if (musicSource != null)
         {
@@ -85,14 +85,12 @@ public class MainMenuManager : MonoBehaviour
         if (panelMenuUtama != null) panelMenuUtama.SetActive(true);
     }
 
-    // Fungsi Baru untuk membuka panel tutorial dari menu
     public void BukaPanelTutorial()
     {
         if (panelMenuUtama != null) panelMenuUtama.SetActive(false);
         if (panelTutorialMenu != null) panelTutorialMenu.SetActive(true);
     }
 
-    // Fungsi Baru untuk menutup panel tutorial kembali ke menu utama
     public void TutupPanelTutorial()
     {
         if (panelTutorialMenu != null) panelTutorialMenu.SetActive(false);
@@ -101,12 +99,12 @@ public class MainMenuManager : MonoBehaviour
 
     private void PerbaruiKunciLevel()
     {
-        int levelTerbuka = PlayerPrefs.GetInt("LevelAktif", 0);
+        int progressLevel = PlayerPrefs.GetInt("ProgressLevel", 0);
         for (int i = 0; i < tombolLevel.Length; i++)
         {
             if (tombolLevel[i] != null)
             {
-                bool terbukan = (i <= levelTerbuka);
+                bool terbukan = i <= progressLevel;
                 tombolLevel[i].interactable = terbukan;
                 
                 Transform gembok = tombolLevel[i].transform.Find("Gembok");
@@ -117,7 +115,7 @@ public class MainMenuManager : MonoBehaviour
             }
         }
 
-        if (levelTerbuka >= 4 && GameObject.Find("Tombol_JelajahBebas") == null)
+        if (progressLevel >= 4 && GameObject.Find("Tombol_JelajahBebas") == null)
         {
             BuatTombolJelajahProsedural();
         }
@@ -132,8 +130,8 @@ public class MainMenuManager : MonoBehaviour
 
     public void MulaiGameNormal()
     {
-        int levelTerbuka = PlayerPrefs.GetInt("LevelAktif", 0);
-        PlayerPrefs.SetInt("LevelAktif", levelTerbuka);
+        int progressLevel = PlayerPrefs.GetInt("ProgressLevel", 0);
+        PlayerPrefs.SetInt("LevelAktif", progressLevel);
         PlayerPrefs.Save();
         MulaiMuatSceneAsync("Car Game");
     }
@@ -231,8 +229,8 @@ public class MainMenuManager : MonoBehaviour
             teksNamaMobil.text = daftarMobilGarasi[indeksMobilDilihat].namaMobil;
         }
 
-        int levelTerbuka = PlayerPrefs.GetInt("LevelAktif", 0);
-        bool isTerbuka = (daftarMobilGarasi[indeksMobilDilihat].levelMinimalBuka <= levelTerbuka + 1);
+        int progressLevel = PlayerPrefs.GetInt("ProgressLevel", 0);
+        bool isTerbuka = daftarMobilGarasi[indeksMobilDilihat].levelMinimalBuka <= progressLevel + 1;
 
         if (isTerbuka)
         {
